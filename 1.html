@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Engineer English Training Suite v5.1</title>
+    <style>
+        :root {
+            --bg-color: #0d1117; 
+            --panel-bg: #161b22;
+            --text-color: #c9d1d9;
+            --accent-color: #58a6ff;
+            --success-color: #238636;
+            --warning-color: #d29922;
+            --error-color: #da3633;
+            --border-color: #30363d;
+            --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-main);
+            margin: 0; padding: 0;
+            display: flex; flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* UTILITIES */
+        .hidden { display: none !important; }
+        .btn {
+            cursor: pointer; font-family: var(--font-mono); border: none; outline: none;
+            transition: all 0.2s; border-radius: 6px;
+        }
+        .btn:active { transform: scale(0.98); }
+
+        /* HOME */
+        #home-view {
+            flex-grow: 1; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; padding: 20px;
+        }
+        .hub-title { font-family: var(--font-mono); font-size: 1.5rem; color: var(--accent-color); margin-bottom: 40px; text-align: center; }
+        .module-grid { display: grid; gap: 20px; width: 100%; max-width: 500px; }
+        .module-card {
+            background: var(--panel-bg); border: 1px solid var(--border-color);
+            padding: 25px; border-radius: 12px; text-align: left; position: relative;
+        }
+        .module-card:hover { border-color: var(--accent-color); }
+        .card-icon { font-size: 2rem; display: block; margin-bottom: 10px; }
+        .card-title { font-size: 1.2rem; font-weight: bold; color: #fff; }
+        .card-badge {
+            position: absolute; top: 15px; right: 15px; font-size: 0.7rem; 
+            padding: 2px 6px; border-radius: 4px; font-family: var(--font-mono);
+        }
+
+        /* HEADER */
+        .game-header {
+            background: #010409; padding: 10px 15px; border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50;
+        }
+        .home-btn { background: transparent; color: #8b949e; border: 1px solid var(--border-color); padding: 5px 10px; }
+        .audio-btn { background: transparent; color: var(--accent-color); border: 1px solid var(--accent-color); padding: 5px 10px; margin-left: 10px; font-size: 0.8rem; }
+        .level-indicator { font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent-color); display: flex; align-items: center; }
+
+        /* RPG UI */
+        #rpg-view, #parser-view { width: 100%; max-width: 600px; margin: 0 auto; flex-grow: 1; display: flex; flex-direction: column; }
+        .rpg-content { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; }
+        .npc-box { background: #21262d; border-left: 4px solid var(--accent-color); padding: 20px; margin-bottom: 20px; border-radius: 0 8px 8px 0; }
+        .opt-btn {
+            width: 100%; background: var(--panel-bg); border: 1px solid var(--border-color);
+            color: var(--text-color); padding: 15px; margin-bottom: 10px; text-align: left; display: flex;
+        }
+        .opt-tag { font-family: var(--font-mono); color: #666; margin-right: 10px; min-width: 15px; }
+
+        /* PARSER UI */
+        .parser-area { flex-grow: 1; overflow-y: auto; padding: 20px 10px; background: #161b22; }
+        .msg-row { display: flex; margin-bottom: 15px; animation: popIn 0.3s forwards; }
+        @keyframes popIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .avatar {
+            width: 35px; height: 35px; border-radius: 50%; display: flex; justify-content: center; align-items: center;
+            font-weight: bold; margin-right: 10px; flex-shrink: 0; font-size: 0.8rem; color: #fff;
+        }
+        .av-pm { background: #e57373; } .av-dev { background: #58a6ff; } .av-client { background: #f0883e; } .av-lead { background: #d29922; }
+        .bubble {
+            background: #21262d; padding: 10px 15px; border-radius: 4px 16px 16px 16px; max-width: 85%;
+            font-size: 0.95rem; line-height: 1.4; border: 2px solid transparent; cursor: pointer;
+        }
+        .bubble.selected { border-color: var(--accent-color); background: #30363d; }
+        .bubble.correct { border-color: var(--success-color); background: rgba(35, 134, 54, 0.1); }
+        .bubble.wrong { border-color: var(--error-color); opacity: 0.6; }
+        .parser-controls { padding: 15px; background: #0d1117; border-top: 1px solid var(--border-color); }
+        .commit-btn { width: 100%; background: var(--success-color); color: white; padding: 15px; font-weight: bold; }
+
+        /* OVERLAYS */
+        .overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 100;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px;
+        }
+        .fb-box { background: var(--panel-bg); border: 1px solid var(--border-color); padding: 25px; border-radius: 12px; width: 100%; max-width: 400px; }
+        .next-btn { background: var(--accent-color); color: #000; padding: 12px 25px; width: 100%; font-weight: bold; margin-top: 15px; }
+        .review-btn { background: #30363d; color: #fff; border: 1px solid #8b949e; margin-top: 10px; width: 100%; padding: 12px; }
+
+        /* REVIEW SCROLL AREA */
+        #review-list {
+            max-height: 50vh; overflow-y: auto; width: 100%; max-width: 500px;
+            background: #0d1117; padding: 10px; margin-bottom: 20px; border-radius: 8px; border: 1px solid var(--border-color);
+        }
+        .review-item {
+            background: #161b22; border: 1px solid #30363d; padding: 15px; margin-bottom: 10px; border-radius: 6px; text-align: left;
+        }
+        .review-q { color: #8b949e; font-size: 0.8rem; margin-bottom: 5px; font-family: var(--font-mono); }
+        .review-res { font-weight: bold; margin-bottom: 5px; display: flex; justify-content: space-between; }
+        .res-good { color: var(--success-color); } .res-bad { color: var(--error-color); } .res-mid { color: var(--warning-color); }
+        .review-note { font-size: 0.9rem; line-height: 1.4; color: #c9d1d9; border-top: 1px solid #30363d; padding-top: 8px; margin-top: 8px; }
+
+        /* Review Action Buttons */
+        .review-actions { display: flex; gap: 10px; width: 100%; max-width: 500px; }
+        .close-rev-btn { flex: 1; background: #30363d; color: #fff; border: 1px solid #555; padding: 12px; border-radius: 6px; }
+        .exit-home-btn { flex: 1; background: #372020; color: #ff8888; border: 1px solid #da3633; padding: 12px; border-radius: 6px; }
+
+    </style>
+</head>
+<body>
+
+    <div id="home-view">
+        <div class="hub-title">&lt;ENG_TRAINING_HUB v5.1 /&gt;</div>
+        <div class="module-grid">
+            <div class="module-card" onclick="initGame('rpg')">
+                <span class="card-badge" style="color:var(--accent-color); background:rgba(88,166,255,0.1)">SPEAKING</span>
+                <span class="card-icon">💬</span>
+                <div class="card-title">The Meeting RPG</div>
+                <p style="color:#8b949e; font-size:0.9rem;">10 Levels. Pragmatics & Strategy.<br>Learn to say NO professionally.</p>
+            </div>
+            <div class="module-card" onclick="initGame('parser')">
+                <span class="card-badge" style="color:var(--success-color); background:rgba(35,134,54,0.1)">LISTENING</span>
+                <span class="card-icon">🎧</span>
+                <div class="card-title">The Log Parser</div>
+                <p style="color:#8b949e; font-size:0.9rem;">10 Levels. Audio Enabled 🔊.<br>Filter signal from noise.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="rpg-view" class="hidden">
+        <header class="game-header">
+            <button class="btn home-btn" onclick="goHome()">🏠 Quit</button>
+            <div class="level-indicator">Level <span id="rpg-lvl">1</span>/10 <span id="rpg-tier-badge" style="margin-left:5px; opacity:0.7">[Tier 1]</span></div>
+        </header>
+        <div class="rpg-content">
+            <div class="terminal-text" id="rpg-context" style="color:#8b949e; font-size:0.85rem; margin-bottom:15px;"></div>
+            <div class="npc-box">
+                <div class="npc-name" id="rpg-npc"></div>
+                <div class="npc-text" id="rpg-text"></div>
+            </div>
+            <div id="rpg-opts" style="margin-top:auto"></div>
+        </div>
+    </div>
+
+    <div id="parser-view" class="hidden">
+        <header class="game-header">
+            <div style="display:flex;">
+                <button class="btn home-btn" onclick="goHome()">🏠 Quit</button>
+                <button class="btn audio-btn" id="audio-toggle" onclick="toggleAudio()">🔊 ON</button>
+            </div>
+            <div class="level-indicator">Level <span id="parser-lvl">1</span>/10 <span id="parser-tier-badge" style="margin-left:5px; opacity:0.7">[Tier 1]</span></div>
+        </header>
+        <div class="parser-area" id="parser-area"></div>
+        <div class="parser-controls">
+            <button id="parser-btn" class="btn commit-btn" onclick="submitParser()">Commit Log</button>
+        </div>
+    </div>
+
+    <div id="feedback-overlay" class="overlay hidden">
+        <div class="fb-box">
+            <h2 id="fb-title"></h2>
+            <p id="fb-text" style="color:#c9d1d9; line-height:1.6;"></p>
+            <button class="btn next-btn" onclick="nextLevel()">Next Level >></button>
+        </div>
+    </div>
+
+    <div id="end-overlay" class="overlay hidden">
+        <h1 id="end-title" style="color:var(--accent-color)">Simulation Complete</h1>
+        <div style="font-size:3rem; color:#fff; font-family:var(--font-mono); margin:10px 0;" id="end-score">0</div>
+        <p id="end-msg" style="color:#8b949e; margin-bottom:20px;">Performance Review</p>
+        
+        <div id="review-container" class="hidden" style="width:100%; display:flex; flex-direction:column; align-items:center;">
+            <div style="text-align:left; width:100%; max-width:500px; margin-bottom:5px; color:#fff; font-weight:bold;">Session Log:</div>
+            <div id="review-list"></div>
+            
+            <div class="review-actions">
+                <button class="btn close-rev-btn" onclick="closeReview()">Close Review</button>
+                <button class="btn exit-home-btn" onclick="goHome()">🏠 Exit to Main Menu</button>
+            </div>
+        </div>
+
+        <div id="end-buttons" style="width:100%; max-width:300px;">
+            <button class="btn review-btn" onclick="showReview()">📖 Review My Answers</button>
+            <button class="btn next-btn" onclick="location.reload()">🔄 Play Again (New Qs)</button>
+            <button class="btn home-btn" style="width:100%; margin-top:10px; border:none;" onclick="goHome()">🏠 Back to Menu</button>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        //  DATABASE: TIERED QUESTION POOLS
+        // ==========================================
+        
+        // --- RPG DATA ---
+        const rpgData = {
+            1: [
+                { ctx: "Code Review", npc: "Senior Dev", txt: "Rename 'x' to 'userTimestamp'.", opts: [
+                    { t: "Fine.", type: "passive", a: "⚠️ Too Passive. 'Fine' is often read as grumpy." },
+                    { t: "Whatever.", type: "aggro", a: "🚫 Aggressive. Never dismiss feedback." },
+                    { t: "Good catch. I'll update it.", type: "pragmatic", a: "✅ Constructive. Accepts feedback professionally." }
+                ]},
+                { ctx: "Borrowing", npc: "Colleague", txt: "Are you using the test phone?", opts: [
+                    { t: "Give it to me.", type: "aggro", a: "🚫 Imperative. Too rude." },
+                    { t: "I want it.", type: "passive", a: "⚠️ Childish phrasing." },
+                    { t: "Could I borrow it for an hour?", type: "pragmatic", a: "✅ Standard polite request." }
+                ]},
+                { ctx: "Meeting", npc: "PM", txt: "Can you join the meeting?", opts: [
+                    { t: "No.", type: "aggro", a: "🚫 Too blunt." },
+                    { t: "Sure.", type: "pragmatic", a: "✅ Simple and positive." },
+                    { t: "I guess.", type: "passive", a: "⚠️ Sounds unenthusiastic." }
+                ]}
+            ],
+            2: [
+                { ctx: "Stand-up", npc: "Lead", txt: "Status update?", opts: [
+                    { t: "Working on stuff.", type: "passive", a: "⚠️ Vague. Be specific." },
+                    { t: "API is 90% done. Deploying at 2 PM.", type: "pragmatic", a: "✅ Specific and actionable." },
+                    { t: "Why do you ask?", type: "aggro", a: "🚫 Defensive." }
+                ]},
+                { ctx: "Bug Report", npc: "QA", txt: "I found a bug in your code.", opts: [
+                    { t: "It's not a bug, it's a feature.", type: "aggro", a: "🚫 Cliché arrogance." },
+                    { t: "Oh, really?", type: "passive", a: "⚠️ Feigning ignorance." },
+                    { t: "Thanks. Can you show me the steps to reproduce?", type: "pragmatic", a: "✅ Collaborative problem solving." }
+                ]},
+                { ctx: "Estimation", npc: "PO", txt: "How long will this take?", opts: [
+                    { t: "A while.", type: "passive", a: "⚠️ Not helpful for planning." },
+                    { t: "Roughly 3 days, assuming no API blockers.", type: "pragmatic", a: "✅ Estimate + Assumption." },
+                    { t: "Done when it's done.", type: "aggro", a: "🚫 Unprofessional." }
+                ]}
+            ],
+            3: [
+                { ctx: "Scope Creep", npc: "PM", txt: "Can we squeeze this feature in?", opts: [
+                    { t: "No. Impossible.", type: "aggro", a: "🚫 Too rigid." },
+                    { t: "I'll try.", type: "passive", a: "⚠️ Dangerous promise." },
+                    { t: "We can, but it risks the QA timeline. Should we prioritize it?", type: "pragmatic", a: "✅ Trade-off analysis." }
+                ]},
+                { ctx: "Tech Debt", npc: "Manager", txt: "Just hack it for now.", opts: [
+                    { t: "That's stupid.", type: "aggro", a: "🚫 Career suicide." },
+                    { t: "Okay.", type: "passive", a: "⚠️ Silent accumulation of debt." },
+                    { t: "We can, but we must schedule a refactor sprint next week.", type: "pragmatic", a: "✅ Compromise with condition." }
+                ]},
+                { ctx: "Overload", npc: "Lead", txt: "Take this extra ticket.", opts: [
+                    { t: "I'm swamped. Which existing ticket should I drop?", type: "pragmatic", a: "✅ Managing capacity." },
+                    { t: "I can't.", type: "aggro", a: "🚫 Not constructive." },
+                    { t: "Ok...", type: "passive", a: "⚠️ Leads to burnout." }
+                ]}
+            ],
+            4: [
+                { ctx: "Negotiation", npc: "Client", txt: "I want it cheaper.", opts: [
+                    { t: "No way.", type: "aggro", a: "🚫 Rude." },
+                    { t: "We can reduce the scope to fit the budget.", type: "pragmatic", a: "✅ Iron Triangle logic." },
+                    { t: "I'll ask my boss.", type: "passive", a: "⚠️ Weak positioning." }
+                ]},
+                { ctx: "Delay", npc: "Stakeholder", txt: "Why is it delayed?", opts: [
+                    { t: "Dev team was slow.", type: "aggro", a: "🚫 Blaming team." },
+                    { t: "Unexpected complexity in the legacy DB.", type: "pragmatic", a: "✅ Technical justification." },
+                    { t: "Sorry.", type: "passive", a: "⚠️ Apology without reason is weak." }
+                ]},
+                { ctx: "Conflict", npc: "Sales", txt: "You promised this feature!", opts: [
+                    { t: "I never said that.", type: "aggro", a: "🚫 Confrontational." },
+                    { t: "Let's review the meeting minutes to align on scope.", type: "pragmatic", a: "✅ Fact-based resolution." },
+                    { t: "Maybe I did...", type: "passive", a: "⚠️ Doormat." }
+                ]}
+            ],
+            5: [
+                { ctx: "Crisis", npc: "CEO", txt: "WE ARE LOSING MONEY! FIX IT!", opts: [
+                    { t: "Stop yelling.", type: "aggro", a: "🚫 Emotional response." },
+                    { t: "Identified the issue. Rolling back. ETA 5 mins.", type: "pragmatic", a: "✅ Calm, factual, solution-oriented." },
+                    { t: "The server crashed.", type: "passive", a: "⚠️ Stating the obvious." }
+                ]},
+                { ctx: "Politics", npc: "VP", txt: "Use this bad tech because I say so.", opts: [
+                    { t: "It's garbage.", type: "aggro", a: "🚫 Insulting." },
+                    { t: "Noted. I'll document the long-term maintenance costs for the record.", type: "pragmatic", a: "✅ Malicious Compliance / Paper Trail." },
+                    { t: "Yes sir.", type: "passive", a: "⚠️ Blind obedience." }
+                ]},
+                { ctx: "Legal", npc: "Legal Dept", txt: "This feature violates GDPR.", opts: [
+                    { t: "Legal ruins everything.", type: "aggro", a: "🚫 Immature." },
+                    { t: "How can we modify the data flow to be compliant?", type: "pragmatic", a: "✅ Seeking solution." },
+                    { t: "Do it anyway.", type: "aggro", a: "🚫 Illegal." }
+                ]}
+            ]
+        };
+
+        // --- PARSER DATA ---
+        const parserData = {
+            1: [
+                { ctx: "Stand-up", msgs: [
+                    { n:"A", t:"Hi team.", imp:false}, 
+                    { n:"B", t:"I will update the API docs.", imp:true, tag:"ACTION"},
+                    { n:"B", t:"Nice weather.", imp:false}
+                ]},
+                { ctx: "Planning", msgs: [
+                    { n:"A", t:"Who wants coffee?", imp:false},
+                    { n:"B", t:"Please finish the tests.", imp:true, tag:"TASK"},
+                    { n:"A", t:"Ok.", imp:false}
+                ]}
+            ],
+            2: [
+                { ctx: "Client Sync", msgs: [
+                    { n:"Client", t:"I love blue.", imp:false},
+                    { n:"Client", t:"Launch is next Friday at 5PM.", imp:true, tag:"DEADLINE"},
+                    { n:"PM", t:"Noted.", imp:false}
+                ]},
+                { ctx: "Review", msgs: [
+                    { n:"Lead", t:"Code looks good.", imp:false},
+                    { n:"Lead", t:"Merge by EOD today.", imp:true, tag:"DEADLINE"},
+                    { n:"Dev", t:"Will do.", imp:false}
+                ]}
+            ],
+            3: [
+                { ctx: "Architecture", msgs: [
+                    { n:"Lead", t:"We could use SQL or NoSQL.", imp:false},
+                    { n:"Lead", t:"Decision: We stick with Postgres.", imp:true, tag:"DECISION"},
+                    { n:"Dev", t:"Sounds stable.", imp:false}
+                ]},
+                { ctx: "Design", msgs: [
+                    { n:"UX", t:"Maybe animate this?", imp:false},
+                    { n:"PM", t:"No, keep it static for v1.", imp:true, tag:"DECISION"},
+                    { n:"UX", t:"Okay.", imp:false}
+                ]}
+            ],
+            4: [
+                { ctx: "Crisis", msgs: [
+                    { n:"A", t:"It might be the DB.", imp:false},
+                    { n:"A", t:"Confirmed: Memory leak in worker.", imp:true, tag:"ROOT CAUSE"},
+                    { n:"B", t:"I thought so.", imp:false}
+                ]},
+                { ctx: "Features", msgs: [
+                    { n:"Client", t:"It would be nice to have dark mode.", imp:false},
+                    { n:"PM", t:"We are NOT doing dark mode in Q1.", imp:true, tag:"SCOPE"},
+                    { n:"Client", t:"Understood.", imp:false}
+                ]}
+            ],
+            5: [
+                { ctx: "Budget", msgs: [
+                    { n:"A", t:"Budget is 50k.", imp:false},
+                    { n:"B", t:"Correction: It was cut to 30k.", imp:true, tag:"UPDATE"},
+                    { n:"A", t:"Oh, that changes things.", imp:false}
+                ]},
+                { ctx: "Launch", msgs: [
+                    { n:"A", t:"Deploying now.", imp:false},
+                    { n:"B", t:"STOP! Security critical bug found.", imp:true, tag:"BLOCKER"},
+                    { n:"A", t:"Aborting deploy.", imp:true, tag:"ACTION"}
+                ]}
+            ]
+        };
+
+        // ==========================================
+        //  GAME ENGINE
+        // ==========================================
+        let gameState = {
+            mode: null,
+            path: [],
+            step: 0,
+            score: 0,
+            history: [],
+            audioEnabled: true
+        };
+
+        function initGame(mode) {
+            gameState.mode = mode;
+            gameState.step = 0;
+            gameState.score = 0;
+            gameState.history = [];
+            gameState.path = generatePath(mode);
+            
+            // UI Reset
+            document.getElementById('home-view').classList.add('hidden');
+            document.getElementById('end-overlay').classList.add('hidden');
+            
+            if(mode === 'rpg') {
+                document.getElementById('rpg-view').classList.remove('hidden');
+                loadRPGLevel();
+            } else {
+                document.getElementById('parser-view').classList.remove('hidden');
+                loadParserLevel();
+            }
+        }
+
+        function generatePath(mode) {
+            let path = [];
+            const data = mode === 'rpg' ? rpgData : parserData;
+            for (let tier = 1; tier <= 5; tier++) {
+                if(data[tier]) {
+                    let pool = [...data[tier]].sort(() => 0.5 - Math.random());
+                    let selection = pool.slice(0, 2);
+                    selection.forEach(item => item._tier = tier);
+                    path.push(...selection);
+                }
+            }
+            return path;
+        }
+
+        function goHome() {
+            stopAudio(); // Kill any speech
+            document.querySelectorAll('.hidden').forEach(el => {
+                // Keep UI logic clean
+            });
+            document.getElementById('rpg-view').classList.add('hidden');
+            document.getElementById('parser-view').classList.add('hidden');
+            document.getElementById('end-overlay').classList.add('hidden');
+            document.getElementById('feedback-overlay').classList.add('hidden');
+            document.getElementById('home-view').classList.remove('hidden');
+        }
+
+        // ================= AUDIO LOGIC =================
+        function toggleAudio() {
+            gameState.audioEnabled = !gameState.audioEnabled;
+            const btn = document.getElementById('audio-toggle');
+            if(gameState.audioEnabled) {
+                btn.innerText = "🔊 ON";
+                btn.style.borderColor = "var(--accent-color)";
+                btn.style.color = "var(--accent-color)";
+            } else {
+                btn.innerText = "🔇 OFF";
+                btn.style.borderColor = "#666";
+                btn.style.color = "#666";
+                stopAudio();
+            }
+        }
+
+        function stopAudio() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+        }
+
+        function playDialog(text, role) {
+            if (!gameState.audioEnabled || !('speechSynthesis' in window)) return;
+            
+            // Cancel previous
+            // window.speechSynthesis.cancel(); // Option: don't cancel to allow overlap, or cancel to be distinct
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'en-US';
+            
+            // Role modifiers
+            if (role === 'PM' || role === 'A') {
+                utterance.pitch = 1; // Normal
+            } else if (role === 'Client') {
+                utterance.pitch = 1.2; // Higher
+            } else if (role === 'Lead') {
+                utterance.pitch = 0.9;
+                utterance.rate = 0.9; // Slower, deeper
+            } else { // Dev / B
+                utterance.pitch = 0.8; // Lower
+            }
+            
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // ================= RPG LOGIC =================
+        function loadRPGLevel() {
+            if(gameState.step >= 10) { endGame(); return; }
+            const q = gameState.path[gameState.step];
+            document.getElementById('rpg-lvl').innerText = gameState.step + 1;
+            document.getElementById('rpg-tier-badge').innerText = `[Tier ${q._tier}]`;
+            document.getElementById('rpg-context').innerText = `// Context: ${q.ctx}`;
+            document.getElementById('rpg-npc').innerText = q.npc;
+            document.getElementById('rpg-text').innerText = q.txt;
+            
+            const div = document.getElementById('rpg-opts');
+            div.innerHTML = '';
+            let opts = [...q.opts].sort(() => 0.5 - Math.random());
+            opts.forEach((o, i) => {
+                let btn = document.createElement('button');
+                btn.className = 'btn opt-btn';
+                btn.innerHTML = `<span class="opt-tag">${['A','B','C'][i]}</span> ${o.t}`;
+                btn.onclick = () => handleRPGChoice(q, o);
+                div.appendChild(btn);
+            });
+        }
+
+        function handleRPGChoice(q, choice) {
+            let pts = 0;
+            let status = 'bad';
+            if(choice.type === 'pragmatic') { pts = 100; status = 'good'; }
+            else if(choice.type === 'passive') { pts = 40; status = 'mid'; }
+            gameState.score += pts;
+            
+            gameState.history.push({
+                q: `${q.ctx}: ${q.txt}`,
+                user: choice.t,
+                status: status,
+                analysis: choice.a,
+                best: q.opts.find(o => o.type === 'pragmatic').t
+            });
+
+            const ov = document.getElementById('feedback-overlay');
+            const tit = document.getElementById('fb-title');
+            const txt = document.getElementById('fb-text');
+            if(status === 'good') { tit.innerText = "EXCELLENT"; tit.style.color = "var(--success-color)"; }
+            else if(status === 'mid') { tit.innerText = "WARNING"; tit.style.color = "var(--warning-color)"; }
+            else { tit.innerText = "ERROR"; tit.style.color = "var(--error-color)"; }
+            txt.innerText = choice.a;
+            ov.classList.remove('hidden');
+        }
+
+        // ================= PARSER LOGIC =================
+        let parserSelection = new Set();
+        
+        function loadParserLevel() {
+            if(gameState.step >= 10) { endGame(); return; }
+            stopAudio(); // Stop previous level audio
+
+            const q = gameState.path[gameState.step];
+            parserSelection.clear();
+            
+            document.getElementById('parser-lvl').innerText = gameState.step + 1;
+            document.getElementById('parser-tier-badge').innerText = `[Tier ${q._tier}]`;
+            
+            const area = document.getElementById('parser-area');
+            area.innerHTML = '';
+            
+            // Render bubbles and play audio sequence
+            q.msgs.forEach((m, i) => {
+                let row = document.createElement('div');
+                row.className = 'msg-row';
+                
+                let av = document.createElement('div');
+                let role = m.n === 'PM' || m.n === 'A' ? 'pm' : (m.n === 'Client' ? 'client' : (m.n==='Lead'?'lead':'dev'));
+                av.className = `avatar av-${role}`;
+                av.innerText = m.n[0];
+                
+                let bub = document.createElement('div');
+                bub.className = 'bubble';
+                bub.innerText = m.t;
+                bub.onclick = () => {
+                    if(parserSelection.has(i)) {
+                        parserSelection.delete(i); bub.classList.remove('selected');
+                    } else {
+                        parserSelection.add(i); bub.classList.add('selected');
+                    }
+                };
+                
+                row.append(av, bub);
+                area.append(row);
+
+                // Queue Audio
+                setTimeout(() => {
+                    if(gameState.mode === 'parser') playDialog(m.t, m.n);
+                }, i * 1500 + 500); // Stagger speech
+            });
+        }
+
+        function submitParser() {
+            stopAudio(); // Stop talking on commit
+            const q = gameState.path[gameState.step];
+            const bubbles = document.querySelectorAll('.parser-area .bubble');
+            let roundScore = 0;
+            let reviewNote = [];
+            
+            q.msgs.forEach((m, i) => {
+                let isSel = parserSelection.has(i);
+                if(m.imp) {
+                    if(isSel) { 
+                        bubbles[i].classList.add('correct'); roundScore += 100; 
+                    } else { 
+                        bubbles[i].style.border = "1px dashed #d29922"; 
+                        reviewNote.push(`MISSED: "${m.t}" (${m.tag})`);
+                    }
+                } else {
+                    if(isSel) { 
+                        bubbles[i].classList.add('wrong'); roundScore -= 50; 
+                        reviewNote.push(`WRONG: "${m.t}" (Noise)`);
+                    }
+                }
+            });
+            
+            if(roundScore < 0) roundScore = 0;
+            gameState.score += roundScore;
+            
+            gameState.history.push({
+                q: `${q.ctx} (Log Filtering)`,
+                user: `Score: ${roundScore}`,
+                status: roundScore === (q.msgs.filter(x=>x.imp).length * 100) ? 'good' : 'mid',
+                analysis: reviewNote.length > 0 ? reviewNote.join("<br>") : "Perfect execution.",
+                best: "Select critical items."
+            });
+
+            setTimeout(() => {
+                gameState.step++;
+                loadParserLevel();
+            }, 1500);
+        }
+
+        // ================= SHARED END & REVIEW =================
+        function nextLevel() {
+            document.getElementById('feedback-overlay').classList.add('hidden');
+            gameState.step++;
+            loadRPGLevel();
+        }
+
+        function endGame() {
+            stopAudio();
+            document.getElementById('rpg-view').classList.add('hidden');
+            document.getElementById('parser-view').classList.add('hidden');
+            document.getElementById('end-overlay').classList.remove('hidden');
+            
+            document.getElementById('end-score').innerText = gameState.score;
+            let msg = "";
+            if(gameState.score >= 900) msg = "🏆 CTO Level Performance!";
+            else if(gameState.score >= 700) msg = "🥈 Senior Engineer Level.";
+            else msg = "💀 Junior Level. Needs Practice.";
+            document.getElementById('end-msg').innerText = msg;
+            
+            closeReview();
+        }
+
+        function showReview() {
+            document.getElementById('end-buttons').classList.add('hidden');
+            document.getElementById('review-container').classList.remove('hidden');
+            
+            const list = document.getElementById('review-list');
+            list.innerHTML = '';
+            
+            gameState.history.forEach((h, i) => {
+                let item = document.createElement('div');
+                item.className = 'review-item';
+                let colorClass = h.status === 'good' ? 'res-good' : (h.status === 'mid' ? 'res-mid' : 'res-bad');
+                
+                item.innerHTML = `
+                    <div class="review-q">Q${i+1}: ${h.q}</div>
+                    <div class="review-res">
+                        <span>Result: ${h.user}</span>
+                        <span class="${colorClass}">${h.status.toUpperCase()}</span>
+                    </div>
+                    <div class="review-note">${h.analysis}</div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function closeReview() {
+            document.getElementById('review-container').classList.add('hidden');
+            document.getElementById('end-buttons').classList.remove('hidden');
+        }
+
+    </script>
+</body>
+</html>
